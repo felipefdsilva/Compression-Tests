@@ -20,5 +20,6 @@ i = 0
 data = []
 while (i < 20):
     createSensingPost(data, i)
-
-print data
+    dataLine = '['+ str(data[i].latitude) + ',' + str(data[i].longitude) + ',' + str(data[i].light) + ',' + str(data[i].temperature) + ',' + str(data[i].humidity) + ',' + str(data[i].rain) + ']'
+    i+=1
+    print dataLine
