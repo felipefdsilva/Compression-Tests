@@ -11,7 +11,7 @@ PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
 LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
 NUMBER_GATHERING=2
 MAX_SENSING_NODES=2
-COMPRESSION_LEVEL=0
+COMPRESSION_LEVEL=9
 
 random.seed(time.time())
 
@@ -34,7 +34,7 @@ def generateData (max_gathering):
 
     return dataList
 
-def createMessage(message, max_sensing_nodes):
+def createMessage(message, max_sensing_nodes, data):
     message["stop_id"] = STOP_ID
     message["batches"] = []
     sensingMessage = {}
@@ -44,7 +44,7 @@ def createMessage(message, max_sensing_nodes):
         sensingMessage["type"] = 'data'
         sensingMessage["received"] = str(datetime.datetime.now().strftime('%d%m%y%H%M%S%f'))[0:12] + '00'
         sensingMessage["header"] = "datetime,lat,lng,light,temperature,humidity,rain"
-        sensingMessage["load"] = generateData(NUMBER_GATHERING)
+        sensingMessage["load"] = data
 
         message['batches'].append(sensingMessage)
 
@@ -60,10 +60,14 @@ def createMessage(message, max_sensing_nodes):
 if __name__ == "__main__":
     message = {}
     messageText = ""
-    createMessage (message, MAX_SENSING_NODES)
-    t1 = time.time()
-    messageText = zlib.compress(json.dumps(message).encode('utf-8').encode('zlib_codec'), COMPRESSION_LEVEL)
-    t2 = time.time()
-    print "Tempo de compressao: ", (t2-t1)*1000,"ms"
+    print "Numero de Arduinos: ", MAX_SENSING_NODES
+    for i in range (0, 1000000, 1000):
+        data = generateData (i)
+        createMessage (message, MAX_SENSING_NODES, data)
+        t1 = time.time()
+        messageText = zlib.compress(json.dumps(message).encode('utf-8').encode('zlib_codec'), COMPRESSION_LEVEL)
+        t2 = time.time()
+        print "Numero de medidas ", i
+        print "Tempo de compressao: ", (t2-t1)*1000,"ms"
     #print messageText
     #doPOST(messageText)
