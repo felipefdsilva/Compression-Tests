@@ -6,7 +6,7 @@ import requests
 import zlib
 
 #SERVER_CERTS = '/home/felipe/ssl/XX.cert.pem' #Server_autorization
-URL = "hKttps://sensingbus.gta.ufrj.br/zip_measurements_batch_sec/"
+URL = "https://sensingbus.gta.ufrj.br/zip_measurements_batch_sec/"
 STOP_ID = 1
 
 PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
