@@ -10,8 +10,10 @@ STOP_ID = 1
 PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
 LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
 NUMBER_GATHERING=2
-MAX_SENSING_NODES=2
+MAX_SENSING_NODES=1
 COMPRESSION_LEVEL=9
+WORD_SIZE_BITS=-15
+MEM_LEVEL=9
 
 random.seed(time.time())
 
@@ -39,8 +41,8 @@ def createMessage(message, max_sensing_nodes, data):
     message["batches"] = []
     sensingMessage = {}
 
-    for sensingNode in range (1, max_sensing_nodes):
-        sensingMessage["node_id"] = sensingNode
+    for sensingNode in range (0, max_sensing_nodes):
+        sensingMessage["node_id"] = sensingNode+1
         sensingMessage["type"] = 'data'
         sensingMessage["received"] = str(datetime.datetime.now().strftime('%d%m%y%H%M%S%f'))[0:12] + '00'
         sensingMessage["header"] = "datetime,lat,lng,light,temperature,humidity,rain"
@@ -60,14 +62,25 @@ def createMessage(message, max_sensing_nodes, data):
 if __name__ == "__main__":
     message = {}
     messageText = ""
+    compressOBJ = zlib.compressobj(COMPRESSION_LEVEL, zlib.DEFLATED, WORD_SIZE_BITS, MEM_LEVEL, zlib.Z_FILTERED)
+
     print "Numero de Arduinos: ", MAX_SENSING_NODES
-    for i in range (0, 1000000, 1000):
+
+    for i in [1, 10, 100, 1000, 10000, 100000]:
         data = generateData (i)
-        createMessage (message, MAX_SENSING_NODES, data)
+        message = createMessage (message, MAX_SENSING_NODES, data)
+        #messageText = json.dumps(message).encode('utf-8').encode('zlib_codec')
+        messageText = json.dumps(message)
+        size1 = len(messageText)
+        compressOBJ.flush(zlib.Z_SYNC_FLUSH)
+
         t1 = time.time()
-        messageText = zlib.compress(json.dumps(message).encode('utf-8').encode('zlib_codec'), COMPRESSION_LEVEL)
+        messageText = compressOBJ.compress(messageText)
+        messageText += compressOBJ.flush(zlib.Z_SYNC_FLUSH)
         t2 = time.time()
-        print "Numero de medidas ", i
-        print "Tempo de compressao: ", (t2-t1)*1000,"ms"
+
+        size2 = len (messageText)
+        #print size1,size2
+        print "Medidas", i, "\t", "Tempo", (t2-t1)*1000, "ms\t", "Razao Tamanho(bytes):", "%.0f" %((float(size2)/float(size1))*100),"%"
     #print messageText
     #doPOST(messageText)
