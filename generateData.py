@@ -6,7 +6,7 @@ import requests
 import zlib
 
 URL = "https://sensingbus.gta.ufrj.br/zip_measurements_batch_sec/"
-STOP_ID = 2
+STOP_ID = 1
 PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
 LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
 NUMBER_GATHERING=2
