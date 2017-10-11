@@ -5,13 +5,9 @@ import json
 import requests
 import zlib
 
-#URL = "https://sensingbus.gta.ufrj.br/zip_measurements_batch_sec/"
 URL = "192.168.0.1"
-#STOP_ID = 1
-#PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
-#LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
-NUMBER_GATHERING=2
-MAX_SENSING_NODES=1
+NUMBER_GATHERING=10
+NUMBER_SENSING_NODES=2
 COMPRESSION_LEVEL=9
 WORD_SIZE_BITS=-15
 MEM_LEVEL=9
@@ -37,34 +33,32 @@ def generateData (max_gathering):
 
     return dataList
 
-def createMessage(message, max_sensing_nodes, data):
+def createMessage(sensing_node, data):
+    message = {}
 
-    for sensingNode in range (0, max_sensing_nodes):
-        message["node_id"] = sensingNode+1
-        message["type"] = 'data'
-        message["received"] = str(datetime.datetime.now().strftime('%d%m%y%H%M%S%f'))[0:12] + '00'
-        message["header"] = "datetime,lat,lng,light,temperature,humidity,rain"
-        message["load"] = data
+    message["node_id"] = sensing_node
+    message["type"] = 'data'
+    message["received"] = str(datetime.datetime.now().strftime('%d%m%y%H%M%S%f'))[0:12] + '00'
+    message["header"] = "datetime,lat,lng,light,temperature,humidity,rain"
+    message["load"] = data
 
-    return message
+    return json.dumps(message)
 
-def doPOST (message):
-        headers = {'Content-Type':'application/x-www-form-urlencoded','Content-Length':str(len(message))}
-        r = requests.post('%s'%URL, data=message,headers=headers)
-        return r.text
-        #return r.json
-        #return r
+#def doPOST (message):
+#        headers = {'Content-Type':'application/x-www-form-urlencoded','Content-Length':str(len(message))}
+#        r = requests.post('%s'%URL, data=message,headers=headers)
+#        return r.text
+#        return r.json
+#        return r
 
 if __name__ == "__main__":
-    message = {}
+    data = []
     messageText = ""
 
-    #print "Numero de Arduinos: ", MAX_SENSING_NODES
-
-    for i in [1, 10, 100, 1000, 10000]:
-        data = generateData (i)
-        message = createMessage (message, MAX_SENSING_NODES, data)
-        messageText = json.dumps(message)
-
-    #print messageText
-    print doPOST(messageText)
+    for sensingNode in range (1, NUMBER_SENSING_NODES+1):
+        data = generateData (NUMBER_GATHERING)
+        messageText = createMessage (sensingNode, data)
+        print "\n"
+        print messageText
+        print "\n"
+        #print doPOST(messageText)
