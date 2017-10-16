@@ -1,3 +1,9 @@
+#Authors: Felipe Ferreira da Silva
+#Universidade Federal do Rio de Janeiro
+#Departamento de Engenharia Eletronica e de Computacao (UFRJ)
+#Project: SensingBus
+#Subject: Comunication between Cloud and Fog
+
 import random
 import time
 import datetime
@@ -5,9 +11,9 @@ import json
 import requests
 import zlib
 
-URL = "192.168.0.1"
-NUMBER_GATHERING=10
-NUMBER_SENSING_NODES=2
+URL = 'http://127.0.0.1:50000/'
+NUMBER_GATHERING=20
+NUMBER_SENSING_NODES=10
 COMPRESSION_LEVEL=9
 WORD_SIZE_BITS=-15
 MEM_LEVEL=9
@@ -38,27 +44,23 @@ def createMessage(sensing_node, data):
 
     message["node_id"] = sensing_node
     message["type"] = 'data'
-    message["received"] = str(datetime.datetime.now().strftime('%d%m%y%H%M%S%f'))[0:12] + '00'
     message["header"] = "datetime,lat,lng,light,temperature,humidity,rain"
     message["load"] = data
 
-    return json.dumps(message)
+    return message
 
-#def doPOST (message):
-#        headers = {'Content-Type':'application/x-www-form-urlencoded','Content-Length':str(len(message))}
-#        r = requests.post('%s'%URL, data=message,headers=headers)
-#        return r.text
-#        return r.json
-#        return r
+def doPOST (message):
+        headers = {'Content-Type':'application/x-www-form-urlencoded','Content-Length':str(len(message))}
+        r = requests.post('%s'%URL, data=message,headers=headers)
+        return r
 
 if __name__ == "__main__":
     data = []
     messageText = ""
 
-    for sensingNode in range (1, NUMBER_SENSING_NODES+1):
-        data = generateData (NUMBER_GATHERING)
-        messageText = createMessage (sensingNode, data)
-        print "\n"
-        print messageText
-        print "\n"
-        #print doPOST(messageText)
+    for numberArduinos in range(1, 101):
+        for sensingNode in range (1, (numberArduinos+1)*10):
+            print sensingNode
+            data = generateData (NUMBER_GATHERING)
+            print doPOST(createMessage(sensingNode, data))
+        time.sleep(10)
