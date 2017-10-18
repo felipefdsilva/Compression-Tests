@@ -1,29 +1,64 @@
+# -*- coding: utf-8 -*-
 #Authors: Roberto Goncalves Pacheco e Felipe Ferreira da Silva
 #Universidade do Estado do Rio de Janeiro
 #Universidade Federal do Rio de Janeiro
 #Departamento de Eletronica e Telecomunicacoes (UERJ)
 #Departamento de Engenharia Eletronica e de Computacao (UFRJ)
-#Project: Sensing Bus
-#Subject: Comunication between Cloud and Fog
+#Project: SensingBus
+#Subject: Fog agent with compression
 
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import threading, Queue
+import matplotlib.pyplot as plt
 from urlparse import parse_qs
-import time
+import threading, Queue
+import Tkinter as tk
 import datetime
-import json
 import requests
+import time
+import json
 import zlib
+import sys
 
-STOP_ID = 1
 URL = "https://sensingbus.gta.ufrj.br/zip_measurements_batch_sec/"
-PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
 LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
+PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
 COMPRESSION_LEVEL=9
 WORD_SIZE_BITS=-15
 MEM_LEVEL=9
+STOP_ID = 1
 
 queue = Queue.Queue()
+stats = {}
+counter = 0
+
+def increment():
+    global counter
+    counter += 1
+    if (counter==100):
+        counter = 1
+    print counter
+    return counter
+
+def createGraphics ():
+    dt = []
+    sizeGain = []
+
+    for key in stats.keys():
+        dt.append(key)
+        sizeGain.append(stats[key])
+
+    print dt
+    print sizeGain
+
+    plt.figure()
+    plt.plot(dt, sizeGain, '-+', markersize=13, markerfacecolor='k')
+    plt.xlabel('(ms)')
+    plt.ylabel('(%)')
+    plt.title('Ganho de Tamanho x Tempo de Compressao')
+    plt.grid(True)
+    plt.savefig('stats.png')
+    plt.close()
+    return
 
 def cloud_client(payload):
     """ Sends mensage to Cloud"""
@@ -34,21 +69,25 @@ def cloud_client(payload):
 def compressMessage (message):
     """Compress Fog Message"""
     compressOBJ = zlib.compressobj(COMPRESSION_LEVEL, zlib.DEFLATED, WORD_SIZE_BITS, MEM_LEVEL, zlib.Z_FILTERED)
-    compressOBJ.flush(zlib.Z_SYNC_FLUSH)
+    #compressOBJ.flush(zlib.Z_SYNC_FLUSH)
 
     messageText = json.dumps(message)
     size1 = len(messageText)
     messageText = messageText.encode('utf-8').encode('zlib_codec')
 
     t1 = time.time()
-
     messageText = compressOBJ.compress(messageText)
     messageText += compressOBJ.flush()
-
     t2 = time.time()
+
     size2 = len (messageText)
 
-    print "Tempo", (t2-t1)*1000, "ms\t", "Razao Tamanho(bytes):", "%.0f" %((float(size2)/float(size1))*100),"%"
+    deltat = "{:.2f}".format((t2-t1)*1000)
+    sizeGain = "{:.0f}".format(float(size2)/float(size1)*100)
+    stats[deltat] = (sizeGain)
+
+    if (increment() == 99):
+        createGraphics ()
 
     return messageText
 
@@ -64,15 +103,10 @@ def createFogMessage(threat_name, queue):
                 if (batch is not None):
                     output['batches'].append(batch)
             message = compressMessage (output)
-            #cloud_client(message)
-        time.sleep(10)
+            cloud_client(message)
+            #time.sleep(1)
 
 class Server(BaseHTTPRequestHandler):
-    # def createHeader(self):
-    #     """Creates header HTTP requisition"""
-    #     self.send_response(200)
-    #     self.send_header('Content-Type', 'application/json')
-    #     self.end_headers()
 
     def do_POST(self):
         """Receives data from Arduino"""
@@ -85,7 +119,6 @@ class Server(BaseHTTPRequestHandler):
         input_batches['received'] = str(datetime.datetime.now().strftime('%d%m%y%H%M%S'))+'00'
         input_batches['load'] = postvars['load']
         queue.put(input_batches)
-        #print 'Message received!\n'
         self.send_response(200)
         return
 

@@ -13,7 +13,7 @@ import zlib
 
 URL = 'http://127.0.0.1:50000/'
 NUMBER_GATHERING=20
-NUMBER_SENSING_NODES=10
+NUMBER_SENSING_NODES=100
 COMPRESSION_LEVEL=9
 WORD_SIZE_BITS=-15
 MEM_LEVEL=9
@@ -58,9 +58,7 @@ if __name__ == "__main__":
     data = []
     messageText = ""
 
-    for numberArduinos in range(1, 101):
-        for sensingNode in range (1, (numberArduinos+1)*10):
-            print sensingNode
-            data = generateData (NUMBER_GATHERING)
-            print doPOST(createMessage(sensingNode, data))
-        time.sleep(10)
+    for sensingNode in range(1, NUMBER_SENSING_NODES+1):
+        data = generateData (sensingNode)
+        print doPOST(createMessage(sensingNode, data))
+        time.sleep(sensingNode)
