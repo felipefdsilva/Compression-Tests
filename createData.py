@@ -61,4 +61,4 @@ if __name__ == "__main__":
     for sensingNode in range(1, NUMBER_SENSING_NODES+1):
         data = generateData (sensingNode)
         print doPOST(createMessage(sensingNode, data))
-        time.sleep(sensingNode)
+        #time.sleep(sensingNode)

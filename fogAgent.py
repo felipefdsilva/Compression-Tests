@@ -9,15 +9,15 @@
 
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import matplotlib.pyplot as plt
+import matplotlib.ticker as tk
 from urlparse import parse_qs
 import threading, Queue
-import Tkinter as tk
+#import Tkinter as tk
 import datetime
 import requests
 import time
 import json
 import zlib
-import sys
 
 URL = "https://sensingbus.gta.ufrj.br/zip_measurements_batch_sec/"
 LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
@@ -28,41 +28,34 @@ MEM_LEVEL=9
 STOP_ID = 1
 
 queue = Queue.Queue()
-stats = {}
-counter = 0
-
-def increment():
-    global counter
-    counter += 1
-    if (counter==100):
-        counter = 1
-    print counter
-    return counter
+deltat = []
+sizeGain = []
 
 def createGraphics ():
+    stats = {}
     dt = []
-    sizeGain = []
+    for i in range (0, len(deltat)):
+        stats [sizeGain[i]] = deltat[i]
 
-    for key in stats.keys():
-        dt.append(key)
-        sizeGain.append(stats[key])
-
-    print dt
-    print sizeGain
+    statsKeys = sorted(stats)
+    for key in statsKeys:
+        dt.append(stats[key])
 
     plt.figure()
-    plt.plot(dt, sizeGain, '-+', markersize=13, markerfacecolor='k')
+    plt.plot(dt, stats.keys(), '-+', markersize=13, markerfacecolor='k')
+    tk.MultipleLocator(base=10.0)
     plt.xlabel('(ms)')
     plt.ylabel('(%)')
     plt.title('Ganho de Tamanho x Tempo de Compressao')
     plt.grid(True)
+    plt.show()
     plt.savefig('stats.png')
     plt.close()
     return
 
 def cloud_client(payload):
     """ Sends mensage to Cloud"""
-    headers = {'Content-Encoding':'application/x-www-form-urlencoded','Content-Length':str(len(payload))}
+    headers = {'Content-Encoding':'application/plain-text','Content-Length':str(len(payload))}
     r = requests.post('%s'%URL, data=payload, headers=headers,cert=(LOCAL_CERTIFICATE, PRIMARY_KEY))
     #print r
 
@@ -72,7 +65,7 @@ def compressMessage (message):
     #compressOBJ.flush(zlib.Z_SYNC_FLUSH)
 
     messageText = json.dumps(message)
-    size1 = len(messageText)
+    size1 = float(len(messageText))
     messageText = messageText.encode('utf-8').encode('zlib_codec')
 
     t1 = time.time()
@@ -80,14 +73,15 @@ def compressMessage (message):
     messageText += compressOBJ.flush()
     t2 = time.time()
 
-    size2 = len (messageText)
+    size2 = float(len(messageText))
 
-    deltat = "{:.2f}".format((t2-t1)*1000)
-    sizeGain = "{:.0f}".format(float(size2)/float(size1)*100)
-    stats[deltat] = (sizeGain)
-
-    if (increment() == 99):
+    deltat.append("{:.1f}".format((t2-t1)*1000))
+    sizeGain.append("{:.0f}".format(size2/size1*100))
+    print "num medidas: ", len(deltat)
+    if (len(deltat)==100):
         createGraphics ()
+        del deltat[:]
+        del sizeGain[:]
 
     return messageText
 
@@ -103,7 +97,7 @@ def createFogMessage(threat_name, queue):
                 if (batch is not None):
                     output['batches'].append(batch)
             message = compressMessage (output)
-            cloud_client(message)
+            #cloud_client(message)
             #time.sleep(1)
 
 class Server(BaseHTTPRequestHandler):
