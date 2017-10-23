@@ -22,9 +22,10 @@ import zlib
 URL = "https://sensingbus.gta.ufrj.br/zip_measurements_batch_sec/"
 LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
 PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
-COMPRESSION_LEVEL=9
-WORD_SIZE_BITS=-15
+COMPRESSION_LEVEL=1
+WORD_SIZE_BITS=+15
 MAX_MEASURES=100
+OFFSET=1
 MEM_LEVEL=9
 STOP_ID = 1
 
@@ -33,23 +34,23 @@ deltat = []
 sizeGain = []
 
 def createGraphics ():
-
+    x_axis = range(OFFSET, 20*len(sizeGain)+OFFSET, 20)
     fig, sGPlot = plt.subplots()
-    smooth_sizeGain = UnivariateSpline (range(1, len(sizeGain)+1), sizeGain)
-    sGPlot.plot(range(1, len(sizeGain)+1),smooth_sizeGain(range(1, len(sizeGain)+1)), 'b-')
+    smooth_sizeGain = UnivariateSpline (x_axis, sizeGain)
+    sGPlot.plot(x_axis, smooth_sizeGain(x_axis), 'b-')
+    #sGPlot.plot(x_axis, sizeGain, 'b-')
 
     dtPlot = sGPlot.twinx()
-    #smooth_deltat = UnivariateSpline (range(1, len(deltat)+1), deltat)
-    #dtPlot.plot(range(1, len(deltat)+1), smooth_deltat(range(1, len(deltat)+1)), 'r-')
-    n = 100  # the larger n is, the smoother curve will be
+    n = 1000  # the larger n is, the smoother curve will be
     b = [1.0 / n] * n
     smooth_deltat = lfilter(b, 1, deltat)
-    dtPlot.plot(range(1, len(deltat)+1), smooth_deltat, 'r-')
+    dtPlot.plot(x_axis, smooth_deltat, 'r-')
+    #dtPlot.plot(x_axis, deltat, 'r-')
 
     sGPlot.set_xlabel('(Numero de Tuplas)')
     sGPlot.set_ylabel('Reducao de Tamanho (%)', color='b')
     dtPlot.set_ylabel('Tempo de Compressao (ms)', color='r')
-    #sGPlot.grid(True)
+
     fig.tight_layout()
     plt.show()
     plt.close()
@@ -63,8 +64,8 @@ def cloud_client(payload):
 
 def compressMessage (message):
     """Compress Fog Message"""
-    compressOBJ = zlib.compressobj(COMPRESSION_LEVEL, zlib.DEFLATED, WORD_SIZE_BITS, MEM_LEVEL, zlib.Z_FILTERED)
-    #compressOBJ.flush(zlib.Z_SYNC_FLUSH)
+    compressOBJ = zlib.compressobj(COMPRESSION_LEVEL, zlib.DEFLATED, WORD_SIZE_BITS, MEM_LEVEL, zlib.Z_HUFFMAN_ONLY)
+    compressOBJ.flush(zlib.Z_SYNC_FLUSH)
 
     messageText = json.dumps(message)
     size1 = float(len(messageText))
@@ -77,8 +78,10 @@ def compressMessage (message):
 
     size2 = float(len(messageText))
 
-    #deltat.append("{:.0f}".format((t2-t1)*1000))
-    deltat.append((t2-t1)*1000)
+    #deltat.append("{:.0f}".format((t2-t1)*1000000))
+    dt = float("{:.2}".format((t2-t1)*1000))
+    #print dt
+    deltat.append(dt)
     sizeGain.append("{:.0f}".format(size2/size1*100))
     print "num medidas: ", len(deltat)
     if (len(deltat)==MAX_MEASURES):

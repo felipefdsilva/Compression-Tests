@@ -13,10 +13,7 @@ import zlib
 
 URL = 'http://127.0.0.1:50000/'
 NUMBER_GATHERING=20
-NUMBER_SENSING_NODES=100
-COMPRESSION_LEVEL=9
-WORD_SIZE_BITS=-15
-MEM_LEVEL=9
+NUMBER_SENSING_NODES=2000
 
 random.seed(time.time())
 
@@ -58,7 +55,7 @@ if __name__ == "__main__":
     data = []
     messageText = ""
 
-    for sensingNode in range(1, NUMBER_SENSING_NODES+1):
+    for sensingNode in range(1, NUMBER_SENSING_NODES+1, NUMBER_GATHERING):
         data = generateData (sensingNode)
         print doPOST(createMessage(sensingNode, data))
         #time.sleep(sensingNode)
