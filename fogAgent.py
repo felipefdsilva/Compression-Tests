@@ -8,11 +8,11 @@
 #Subject: Fog agent with compression
 
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from scipy.interpolate import UnivariateSpline
+from scipy.signal import lfilter
 import matplotlib.pyplot as plt
-import matplotlib.ticker as tk
 from urlparse import parse_qs
 import threading, Queue
-#import Tkinter as tk
 import datetime
 import requests
 import time
@@ -24,6 +24,7 @@ LOCAL_CERTIFICATE='/home/felipe/ssl/raspberry3.cert.pem'
 PRIMARY_KEY='/home/felipe/ssl/raspberry3.key.pem'
 COMPRESSION_LEVEL=9
 WORD_SIZE_BITS=-15
+MAX_MEASURES=100
 MEM_LEVEL=9
 STOP_ID = 1
 
@@ -32,24 +33,25 @@ deltat = []
 sizeGain = []
 
 def createGraphics ():
-    stats = {}
-    dt = []
-    for i in range (0, len(deltat)):
-        stats [sizeGain[i]] = deltat[i]
 
-    statsKeys = sorted(stats)
-    for key in statsKeys:
-        dt.append(stats[key])
+    fig, sGPlot = plt.subplots()
+    smooth_sizeGain = UnivariateSpline (range(1, len(sizeGain)+1), sizeGain)
+    sGPlot.plot(range(1, len(sizeGain)+1),smooth_sizeGain(range(1, len(sizeGain)+1)), 'b-')
 
-    plt.figure()
-    plt.plot(dt, stats.keys(), '-+', markersize=13, markerfacecolor='k')
-    tk.MultipleLocator(base=10.0)
-    plt.xlabel('(ms)')
-    plt.ylabel('(%)')
-    plt.title('Ganho de Tamanho x Tempo de Compressao')
-    plt.grid(True)
+    dtPlot = sGPlot.twinx()
+    #smooth_deltat = UnivariateSpline (range(1, len(deltat)+1), deltat)
+    #dtPlot.plot(range(1, len(deltat)+1), smooth_deltat(range(1, len(deltat)+1)), 'r-')
+    n = 100  # the larger n is, the smoother curve will be
+    b = [1.0 / n] * n
+    smooth_deltat = lfilter(b, 1, deltat)
+    dtPlot.plot(range(1, len(deltat)+1), smooth_deltat, 'r-')
+
+    sGPlot.set_xlabel('(Numero de Tuplas)')
+    sGPlot.set_ylabel('Reducao de Tamanho (%)', color='b')
+    dtPlot.set_ylabel('Tempo de Compressao (ms)', color='r')
+    #sGPlot.grid(True)
+    fig.tight_layout()
     plt.show()
-    plt.savefig('stats.png')
     plt.close()
     return
 
@@ -75,10 +77,11 @@ def compressMessage (message):
 
     size2 = float(len(messageText))
 
-    deltat.append("{:.1f}".format((t2-t1)*1000))
+    #deltat.append("{:.0f}".format((t2-t1)*1000))
+    deltat.append((t2-t1)*1000)
     sizeGain.append("{:.0f}".format(size2/size1*100))
     print "num medidas: ", len(deltat)
-    if (len(deltat)==100):
+    if (len(deltat)==MAX_MEASURES):
         createGraphics ()
         del deltat[:]
         del sizeGain[:]
