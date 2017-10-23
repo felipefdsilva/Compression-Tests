@@ -60,7 +60,7 @@ def cloud_client(payload):
     """ Sends mensage to Cloud"""
     headers = {'Content-Encoding':'application/plain-text','Content-Length':str(len(payload))}
     r = requests.post('%s'%URL, data=payload, headers=headers,cert=(LOCAL_CERTIFICATE, PRIMARY_KEY))
-    #print r
+    return r
 
 def compressMessage (message):
     """Compress Fog Message"""
@@ -103,7 +103,7 @@ def createFogMessage(threat_name, queue):
                 if (batch is not None):
                     output['batches'].append(batch)
             message = compressMessage (output)
-            #cloud_client(message)
+            print cloud_client(message)
             #time.sleep(1)
 
 class Server(BaseHTTPRequestHandler):
